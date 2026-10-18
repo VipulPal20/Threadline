@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #f7f6f0;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-lime text-ink hover:shadow-[0_6px_0_0_#6b8f1d] active:shadow-none;
+  }
+  .btn-dark {
+    @apply btn bg-ink text-white hover:shadow-[0_6px_0_0_#b8d830] active:shadow-none;
+  }
+  .btn-ghost {
+    @apply btn bg-[#edf0e9] text-ink hover:bg-[#e2e8dc];
+  }
+  .card {
+    @apply rounded-[1.75rem] border border-line bg-white p-6 shadow-card;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-lime-dark;
+  }
+  .eyebrow::before {
+    content: "";
+    @apply h-2 w-2 rounded-full bg-sun;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full bg-lime px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-ink;
+  }
+  .stat {
+    @apply rounded-[2rem] p-6 transition duration-300 hover:-translate-y-1 hover:rotate-[-0.6deg];
+  }
+  .link-card {
+    @apply card block transition duration-300 hover:-translate-y-1 hover:border-ink hover:shadow-lift active:scale-[0.99];
+  }
+  /* Scroll reveal: content is visible by default; Reveal hides it only after mount, so it never stays hidden without scripts. */
+  .reveal {
+    transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--delay, 0ms);
+  }
+  .reveal[data-state="hidden"] {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  .tilt {
+    transition: transform 0.25s ease-out;
+    transform: perspective(700px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal[data-state="hidden"] {
+    opacity: 1;
+    transform: none;
+  }
+}
