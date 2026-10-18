@@ -1,0 +1,32 @@
+# One command to run Threadline:
+#   SESSION_SECRET=$(openssl rand -hex 32) docker compose up --build
+# Then open http://localhost:3000 and register your institute.
+services:
+  app:
+    build: .
+    image: threadline
+    ports:
+      - "3000:3000"
+    environment:
+      # Your PostgreSQL connection string, for example from Neon.
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL to your PostgreSQL connection string}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET (for example: openssl rand -hex 32)}
+      # The public address people use. Use https:// behind a TLS proxy; it also marks cookies Secure.
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      # Optional. Without a key every AI feature falls back to plain templates.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      # Optional. Without SMTP_HOST, emails are written to the log and admins copy invite links by hand.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_FROM: ${SMTP_FROM:-Threadline <no-reply@localhost>}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+    volumes:
+      - app-data:/data
+    restart: unless-stopped
+
+volumes:
+  app-data:

@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Next.js build output and generated files
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets: never commit these. Only .env.example is tracked.
+.env
+.env.*
+!.env.example
+*.pem
+
+# Test and coverage output
+coverage/
+test-results/
+playwright-report/
+.test-resumes/
+.e2e-resumes/
+
+# Uploaded files (résumés)
+storage/
+
+# Documentation, presentations, and generated artifacts
+/docs/
+/presentation/
+/artifacts/
+
+# Old local SQLite files from before the move to PostgreSQL
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-wal
+prisma/*.db-shm
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Deployment tool folders
+.vercel/
+.netlify/

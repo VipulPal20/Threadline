@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+env:
+  # A throwaway PostgreSQL service for tests; the build never needs a real database or secret.
+  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/threadline"
+  SESSION_SECRET: "ci-only-secret"
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: threadline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Migrations match the schema
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "postgresql://postgres:postgres@localhost:5432/shadow_check" --exit-code
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end happy path
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: threadline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  docker:
+    name: Docker image builds and starts
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: threadline
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t threadline .
+      - name: Start it, apply migrations, and exercise it
+        run: |
+          docker run -d --name cg --network host -e DATABASE_URL="$DATABASE_URL" -e SESSION_SECRET=ci-smoke-secret -e APP_URL=http://localhost:3000 threadline
+          for i in $(seq 1 40); do curl -fsS http://localhost:3000/api/health && break || sleep 3; done
+          curl -fsS http://localhost:3000/api/health
+          curl -fsS -X POST http://localhost:3000/api/auth/register-institute \
+            -H 'content-type: application/json' \
+            -d '{"instituteName":"Smoke Institute","domains":"smoke.test","name":"Smoke Admin","email":"admin@smoke.test","password":"Sup3rsecret","acceptTerms":true}'
+          curl -sI http://localhost:3000/login | grep -i "x-frame-options: DENY"
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs cg
