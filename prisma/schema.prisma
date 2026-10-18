@@ -1,0 +1,382 @@
+// Threadline: multi-institute (B2B) schema, on PostgreSQL (Neon).
+// Enum-like columns are validated strings (see lib/domain/constants.ts) and list columns
+// are JSON-encoded strings (see lib/json.ts), which keeps the schema simple and portable.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"] // the second is for the Alpine Docker image
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Institute {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  joinCode            String   @unique
+  allowedEmailDomains String   @default("[]") // JSON string[]
+  requireApproval     Boolean  @default(true) // alumni sign-ups need admin approval
+  requestExpiryHours  Int      @default(72)
+  monthlyAskLimit     Int      @default(3)
+  aiEnabled           Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  users       User[]
+  invites     Invite[]
+  asks        Ask[]
+  auditEvents AuditEvent[]
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  instituteId        String
+  role               String // ADMIN | ALUMNI | STUDENT
+  email              String    @unique
+  passwordHash       String
+  name               String
+  phone              String?
+  status             String    @default("ACTIVE") // PENDING_APPROVAL | ACTIVE | SUSPENDED | DELETED
+  onboardingComplete Boolean   @default(false)
+  emailNotifications Boolean   @default(true)
+  termsAcceptedAt    DateTime?
+  termsVersion       String?
+  deletedAt          DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  institute        Institute       @relation(fields: [instituteId], references: [id])
+  studentProfile   StudentProfile?
+  alumniProfile    AlumniProfile?
+  sessions         Session[]
+  skills           UserSkill[]
+  experiences      Experience[]
+  educations       Education[]
+  resumes          Resume[]
+  asks             Ask[]           @relation("AskStudent")
+  sentRequests     IntroRequest[]  @relation("RequestStudent")
+  receivedRequests IntroRequest[]  @relation("RequestAlumni")
+  matchSnapshots   MatchSnapshot[]
+  messages         Message[]
+  notifications    Notification[]
+  invitesSent      Invite[]
+  passwordResets   PasswordReset[]
+
+  @@index([instituteId, role, status])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invite {
+  id          String    @id @default(cuid())
+  instituteId String
+  email       String
+  role        String // STUDENT | ALUMNI
+  name        String?
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  createdAt   DateTime  @default(now())
+
+  institute Institute @relation(fields: [instituteId], references: [id])
+  invitedBy User      @relation(fields: [invitedById], references: [id])
+
+  @@index([instituteId, email])
+}
+
+model StudentProfile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  enrollmentNo       String?
+  department         String?
+  degree             String?
+  currentYear        Int?
+  graduationYear     Int?
+  cgpa               Float?
+  city               String?
+  headline           String?
+  bio                String?
+  targetRoles        String   @default("[]") // JSON string[]
+  targetCompanies    String   @default("[]")
+  interestedDomains  String   @default("[]")
+  preferredLocations String   @default("[]")
+  linkedinUrl        String?
+  githubUrl          String?
+  portfolioUrl       String?
+  resumeId           String?
+  completeness       Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AlumniProfile {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  department           String?
+  degree               String?
+  graduationYear       Int?
+  currentCompany       String?
+  currentTitle         String?
+  industry             String?
+  yearsExperience      Int?
+  city                 String?
+  workMode             String? // ONSITE | HYBRID | REMOTE
+  headline             String?
+  bio                  String?
+  helpTypes            String   @default("[]") // JSON string[] of ASK_CATEGORIES
+  referralCompanies    String   @default("[]")
+  maxActiveConnections Int      @default(3) // PRIVATE: only matching and the owner may read this
+  acceptingRequests    Boolean  @default(true)
+  linkedinUrl          String?
+  resumeId             String?
+  completeness         Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Experience {
+  id           String   @id @default(cuid())
+  userId       String
+  type         String   @default("JOB") // JOB | INTERNSHIP | PROJECT
+  title        String
+  organisation String?
+  startDate    String? // YYYY or YYYY-MM
+  endDate      String?
+  isCurrent    Boolean  @default(false)
+  description  String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Education {
+  id          String   @id @default(cuid())
+  userId      String
+  institution String
+  degree      String?
+  field       String?
+  startYear   Int?
+  endYear     Int?
+  grade       String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Skill {
+  id      String @id @default(cuid())
+  name    String @unique // canonical, lowercase
+  aliases String @default("[]")
+
+  userSkills UserSkill[]
+  askSkills  AskSkill[]
+}
+
+model UserSkill {
+  id      String @id @default(cuid())
+  userId  String
+  skillId String
+  level   String @default("INTERMEDIATE") // BEGINNER | INTERMEDIATE | EXPERT
+  years   Float?
+  source  String @default("MANUAL") // MANUAL | RESUME
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([userId, skillId])
+}
+
+model Resume {
+  id            String   @id @default(cuid())
+  userId        String
+  fileName      String
+  mime          String
+  size          Int
+  storagePath   String
+  extractedText String?
+  parsedJson    String?
+  uploadedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Ask {
+  id             String    @id @default(cuid())
+  instituteId    String
+  studentId      String
+  category       String // see ASK_CATEGORIES
+  title          String
+  description    String
+  domain         String?
+  targetRole     String?
+  targetCompany  String?
+  location       String?
+  workMode       String?
+  deadline       DateTime?
+  urgency        String    @default("NORMAL") // LOW | NORMAL | HIGH
+  status         String    @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | EXPIRED | CANCELLED
+  resolvedAt     DateTime?
+  resolutionNote String?
+  rating         Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  institute Institute       @relation(fields: [instituteId], references: [id])
+  student   User            @relation("AskStudent", fields: [studentId], references: [id])
+  skills    AskSkill[]
+  snapshots MatchSnapshot[]
+  requests  IntroRequest[]
+
+  @@index([instituteId, status])
+  @@index([studentId, createdAt])
+}
+
+model AskSkill {
+  id         String @id @default(cuid())
+  askId      String
+  skillId    String
+  importance String @default("MUST") // MUST | NICE
+
+  ask   Ask   @relation(fields: [askId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+
+  @@unique([askId, skillId])
+}
+
+model MatchSnapshot {
+  id         String   @id @default(cuid())
+  askId      String
+  alumniId   String
+  rank       Int
+  score      Float
+  parts      String // JSON
+  reasons    String // JSON string[]
+  computedAt DateTime @default(now())
+
+  ask      Ask            @relation(fields: [askId], references: [id], onDelete: Cascade)
+  alumni   User           @relation(fields: [alumniId], references: [id])
+  requests IntroRequest[]
+
+  @@index([askId])
+}
+
+model IntroRequest {
+  id              String    @id @default(cuid())
+  askId           String
+  studentId       String
+  alumniId        String
+  matchSnapshotId String?
+  state           String    @default("PENDING") // PENDING | ACCEPTED | DECLINED | EXPIRED | WITHDRAWN | CLOSED
+  initialMessage  String
+  declineReason   String?
+  respondedAt     DateTime?
+  closedAt        DateTime?
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+
+  ask           Ask            @relation(fields: [askId], references: [id])
+  student       User           @relation("RequestStudent", fields: [studentId], references: [id])
+  alumni        User           @relation("RequestAlumni", fields: [alumniId], references: [id])
+  matchSnapshot MatchSnapshot? @relation(fields: [matchSnapshotId], references: [id])
+  conversation  Conversation?
+
+  @@unique([askId, alumniId])
+  @@index([alumniId, state])
+  @@index([studentId, state])
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  introRequestId String   @unique
+  status         String   @default("ACTIVE") // ACTIVE | CLOSED
+  lastMessageAt  DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  introRequest IntroRequest @relation(fields: [introRequestId], references: [id])
+  messages     Message[]
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderId       String
+  body           String
+  aiAssisted     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  readAt         DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      String
+  payload   String    @default("{}") // JSON
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model AuditEvent {
+  id          String   @id @default(cuid())
+  instituteId String
+  actorId     String?
+  kind        String
+  entity      String?
+  entityId    String?
+  payload     String   @default("{}") // JSON; never message text
+  createdAt   DateTime @default(now())
+
+  institute Institute @relation(fields: [instituteId], references: [id])
+
+  @@index([instituteId, kind, createdAt])
+}
+
+/// Admin-issued, single-use link for a member who forgot their password. Only the token hash is stored.
+model PasswordReset {
+  id          String    @id @default(cuid())
+  userId      String
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

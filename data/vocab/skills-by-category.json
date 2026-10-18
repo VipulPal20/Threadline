@@ -1,0 +1,82 @@
+{
+  "data analytics": {
+    "sql": 10,
+    "python": 9,
+    "data analytics": 8,
+    "power bi": 7,
+    "excel": 5,
+    "statistics": 6,
+    "tableau": 5,
+    "data visualization": 5
+  },
+  "software engineering": {
+    "typescript": 9,
+    "javascript": 8,
+    "react": 8,
+    "python": 7,
+    "system design": 7,
+    "testing": 5,
+    "api design": 5,
+    "cloud": 6
+  },
+  "machine learning": {
+    "python": 10,
+    "machine learning": 9,
+    "statistics": 7,
+    "pandas": 7,
+    "scikit-learn": 6,
+    "data visualization": 4,
+    "deep learning": 6,
+    "sql": 4
+  },
+  "product management": {
+    "product": 10,
+    "user research": 7,
+    "roadmapping": 7,
+    "analytics": 6,
+    "communication": 5,
+    "experimentation": 5,
+    "strategy": 6,
+    "sql": 4
+  },
+  "semiconductor systems": {
+    "vlsi design": 10,
+    "semiconductors": 9,
+    "verilog": 8,
+    "embedded systems": 7,
+    "digital design": 7,
+    "signal processing": 5,
+    "python": 4,
+    "research": 5
+  },
+  "research": {
+    "research": 10,
+    "technical writing": 7,
+    "python": 7,
+    "experimentation": 7,
+    "literature review": 6,
+    "statistics": 6,
+    "presentation": 5,
+    "machine learning": 5
+  },
+  "entrepreneurship": {
+    "startups": 9,
+    "funding": 9,
+    "product": 8,
+    "strategy": 7,
+    "sales": 6,
+    "hiring": 6,
+    "communication": 5,
+    "business models": 5
+  },
+  "design": {
+    "product design": 9,
+    "user research": 8,
+    "figma": 8,
+    "prototyping": 7,
+    "visual design": 7,
+    "communication": 5,
+    "design systems": 6,
+    "usability": 6
+  }
+}
