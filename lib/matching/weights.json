@@ -1,0 +1,31 @@
+{
+  "weights": {
+    "skills": 0.3,
+    "text": 0.15,
+    "roleFit": 0.15,
+    "studentFit": 0.1,
+    "affiliation": 0.08,
+    "location": 0.05,
+    "experience": 0.05,
+    "responsiveness": 0.07,
+    "headroom": 0.05
+  },
+  "penalties": {
+    "conversationLoad": 0.1,
+    "recentLoad": 0.05
+  },
+  "skillLevelCredit": { "BEGINNER": 0.5, "INTERMEDIATE": 0.8, "EXPERT": 1 },
+  "mustSkillWeight": 2,
+  "niceSkillWeight": 1,
+  "declineCooldownDays": 30,
+  "responsivenessPrior": { "acceptRate": 0.6, "weight": 5 },
+  "experienceRanges": {
+    "referral": [2, 10],
+    "mentorship": [5, 25],
+    "mock_interview": [2, 12],
+    "resume_review": [2, 15],
+    "career_advice": [5, 30],
+    "research": [5, 30],
+    "funding": [5, 30]
+  }
+}
